@@ -1,4 +1,4 @@
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
@@ -12,6 +12,7 @@ app.use(
         ]
     })
 )
+app.use(express.json());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.fvwg0tw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -32,6 +33,28 @@ async function run() {
     // await client.db("admin").command({ ping: 1 });
 
     const blogsData = client.db('blogs').collection('blogsData');
+
+    app.post('/blogs', async(req,res)=>{
+      const query = req.body;
+      console.log(query);
+      const result = await blogsData.insertOne(query);
+      res.send(result);
+    })
+
+    app.get('/blogs', async(req,res)=>{
+      const cursor = blogsData.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
+    app.get('/blogs/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await blogsData.findOne(query);
+      res.send(result);
+    })
+
+
 
     
 
