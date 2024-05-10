@@ -33,6 +33,7 @@ async function run() {
     // await client.db("admin").command({ ping: 1 });
 
     const blogsData = client.db('blogs').collection('blogsData');
+    const wishlist = client.db('blogs').collection('wishlist');
 
     app.post('/blogs', async(req,res)=>{
       const query = req.body;
@@ -40,11 +41,29 @@ async function run() {
       const result = await blogsData.insertOne(query);
       res.send(result);
     })
+    app.post('/wishlist', async(req,res)=>{
+
+    })
 
     app.get('/blogs', async(req,res)=>{
       const cursor = blogsData.find();
       const result = await cursor.toArray();
       res.send(result);
+    })
+    app.get('/allBlogs', async(req,res)=>{
+      const filter = req.query.filter
+      const search = req.query.search
+      // let query = {}
+      let query = {
+        title: { $regex: search, $options: 'i' },
+      }
+      if (filter) query.category = filter
+      // if (filter) query = {category: filter}
+      const result = await blogsData
+        .find(query)
+        .toArray()
+
+      res.send(result)
     })
 
     app.get('/blogs/:id',async(req,res)=>{
