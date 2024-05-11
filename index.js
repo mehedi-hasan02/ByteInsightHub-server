@@ -38,7 +38,7 @@ async function run() {
 
     app.post('/blogs', async (req, res) => {
       const query = req.body;
-      console.log(query);
+      // console.log(query);
       const result = await blogsData.insertOne(query);
       res.send(result);
     })
@@ -122,7 +122,13 @@ async function run() {
       res.send(result);
     })
 
-    
+    app.get('/comment/:id',async(req,res)=>{
+      const id = req.params.id;
+      const query = {blogID : id};
+      // const cursor = commentCollection.find();
+      const result = await commentCollection.find(query).toArray();
+      res.send(result);
+    })
 
 
 
