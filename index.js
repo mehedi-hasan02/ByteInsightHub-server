@@ -6,11 +6,11 @@ const app = express();
 const port = process.env.PORT || 8000;
 
 app.use(
-    cors({
-        origin: [
-            "http://localhost:5173",
-        ]
-    })
+  cors({
+    origin: [
+      "http://localhost:5173",
+    ]
+  })
 )
 app.use(express.json());
 
@@ -35,22 +35,20 @@ async function run() {
     const blogsData = client.db('blogs').collection('blogsData');
     const wishlist = client.db('blogs').collection('wishlist');
 
-    app.post('/blogs', async(req,res)=>{
+    app.post('/blogs', async (req, res) => {
       const query = req.body;
       console.log(query);
       const result = await blogsData.insertOne(query);
       res.send(result);
     })
-    app.post('/wishlist', async(req,res)=>{
 
-    })
 
-    app.get('/blogs', async(req,res)=>{
+    app.get('/blogs', async (req, res) => {
       const cursor = blogsData.find();
       const result = await cursor.toArray();
       res.send(result);
     })
-    app.get('/allBlogs', async(req,res)=>{
+    app.get('/allBlogs', async (req, res) => {
       const filter = req.query.filter
       const search = req.query.search
       // let query = {}
@@ -66,16 +64,31 @@ async function run() {
       res.send(result)
     })
 
-    app.get('/blogs/:id',async(req,res)=>{
+    app.get('/blogs/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const result = await blogsData.findOne(query);
+      res.send(result);
+    })
+
+    //wishlist collection
+    app.post('/wishlist', async (req, res) => {
+      const query = req.body;
+      const result = await wishlist.insertOne(query);
+      res.send(result);
+    })
+
+    app.get('/wishlist/:email', async(req,res)=>{
+      const emailName = req.params.email;
+      const query = {email : emailName};
+      const result = await wishlist.find(query).toArray();
       res.send(result);
     })
 
 
 
-    
+
+
 
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
@@ -85,10 +98,10 @@ async function run() {
 }
 run().catch(console.dir);
 
-app.get('/', (req,res)=>{
-    res.send("Hello Dunia");
+app.get('/', (req, res) => {
+  res.send("Hello Dunia");
 })
 
-app.listen(port, ()=>{
-    console.log('Port running at ', port);
+app.listen(port, () => {
+  console.log('Port running at ', port);
 })
