@@ -34,6 +34,7 @@ async function run() {
 
     const blogsData = client.db('blogs').collection('blogsData');
     const wishlist = client.db('blogs').collection('wishlist');
+    const commentCollection = client.db('blogs').collection('commentCollection');
 
     app.post('/blogs', async (req, res) => {
       const query = req.body;
@@ -114,6 +115,14 @@ async function run() {
 
 
 
+    //comment collection
+    app.post('/comment',async(req,res)=>{
+      const query = req.body;
+      const result = await commentCollection.insertOne(query);
+      res.send(result);
+    })
+
+    
 
 
 
