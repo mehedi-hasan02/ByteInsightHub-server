@@ -71,6 +71,20 @@ async function run() {
       res.send(result);
     })
 
+    app.put('/blogs/:id',async(req,res)=>{
+      const id = req.params.id;
+      const blogData = req.body;
+      const query = {_id: new ObjectId(id)};
+      const option = {upsert: true}
+      const updateDoc = {
+        $set:{
+          ...blogData,
+        },
+      }
+      const result = await blogsData.updateOne(query,updateDoc,option);
+      res.send(result);
+    })
+
     //wishlist collection
     app.post('/wishlist', async (req, res) => {
       const query = req.body;
@@ -78,10 +92,23 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/wishlist',async(req,res)=>{
+      const cursor = wishlist.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
     app.get('/wishlist/:email', async(req,res)=>{
       const emailName = req.params.email;
       const query = {email : emailName};
       const result = await wishlist.find(query).toArray();
+      res.send(result);
+    })
+
+    app.delete('/wishlist/:id', async(req,res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await wishlist.deleteOne(query);
       res.send(result);
     })
 
