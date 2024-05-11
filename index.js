@@ -1,5 +1,7 @@
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const express = require('express');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 const cors = require('cors');
 require('dotenv').config();
 const app = express();
@@ -9,10 +11,13 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-    ]
+      "https://rococo-kheer-b232e7.netlify.app",
+    ],
+    credentials: true
   })
 )
 app.use(express.json());
+app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.fvwg0tw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -25,6 +30,40 @@ const client = new MongoClient(uri, {
   }
 });
 
+
+const logger = async(req,res,next)=>{
+  console.log('called: ',req.host, req.originalUrl);
+  next();
+}
+
+const verifyToken = async(req,res,next)=>{
+  const token = req.cookies?.token;
+
+  console.log('Value of the middleware: ',token);
+
+  if(!token)
+  {
+    return res.status(401).send({message: 'not authorize'})
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded)=>{
+    //error
+    if(err)
+    {
+      console.log(err);
+      return req.status(401).send({message: 'unauthorize'})
+    }
+    req.user = decoded;
+    next();
+  })
+  
+}
+
+const cookieOptions = {
+  httpOnly: true,
+  sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+  secure: process.env.NODE_ENV === "production" ? true : false,
+};
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -36,9 +75,26 @@ async function run() {
     const wishlist = client.db('blogs').collection('wishlist');
     const commentCollection = client.db('blogs').collection('commentCollection');
 
+    //creating Token
+    app.post("/jwt", logger, async (req, res) => {
+      const user = req.body;
+      console.log("user for token", user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET);
+
+      res.cookie("token", token, cookieOptions).send({ success: true });
+    });
+
+    //clearing Token
+    app.post("/logout", async (req, res) => {
+      const user = req.body;
+      console.log("logging out", user);
+      res
+        .clearCookie("token", { ...cookieOptions, maxAge: 0 })
+        .send({ success: true });
+    });
+
     app.post('/blogs', async (req, res) => {
       const query = req.body;
-      // console.log(query);
       const result = await blogsData.insertOne(query);
       res.send(result);
     })
@@ -72,17 +128,17 @@ async function run() {
       res.send(result);
     })
 
-    app.put('/blogs/:id',async(req,res)=>{
+    app.put('/blogs/:id', async (req, res) => {
       const id = req.params.id;
       const blogData = req.body;
-      const query = {_id: new ObjectId(id)};
-      const option = {upsert: true}
+      const query = { _id: new ObjectId(id) };
+      const option = { upsert: true }
       const updateDoc = {
-        $set:{
+        $set: {
           ...blogData,
         },
       }
-      const result = await blogsData.updateOne(query,updateDoc,option);
+      const result = await blogsData.updateOne(query, updateDoc, option);
       res.send(result);
     })
 
@@ -93,22 +149,22 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/wishlist',async(req,res)=>{
+    app.get('/wishlist', async (req, res) => {
       const cursor = wishlist.find();
       const result = await cursor.toArray();
       res.send(result);
     })
 
-    app.get('/wishlist/:email', async(req,res)=>{
+    app.get('/wishlist/:email', async (req, res) => {
       const emailName = req.params.email;
-      const query = {email : emailName};
+      const query = { email: emailName };
       const result = await wishlist.find(query).toArray();
       res.send(result);
     })
 
-    app.delete('/wishlist/:id', async(req,res)=>{
+    app.delete('/wishlist/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const result = await wishlist.deleteOne(query);
       res.send(result);
     })
@@ -116,15 +172,15 @@ async function run() {
 
 
     //comment collection
-    app.post('/comment',async(req,res)=>{
+    app.post('/comment', async (req, res) => {
       const query = req.body;
       const result = await commentCollection.insertOne(query);
       res.send(result);
     })
 
-    app.get('/comment/:id',async(req,res)=>{
+    app.get('/comment/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {blogID : id};
+      const query = { blogID: id };
       // const cursor = commentCollection.find();
       const result = await commentCollection.find(query).toArray();
       res.send(result);
