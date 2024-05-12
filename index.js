@@ -67,6 +67,7 @@ async function run() {
 
     const blogsData = client.db('blogs').collection('blogsData');
     const wishlist = client.db('blogs').collection('wishlist');
+    const science = client.db('blogs').collection('science');
     const commentCollection = client.db('blogs').collection('commentCollection');
 
     //creating Token
@@ -94,11 +95,24 @@ async function run() {
     })
 
 
+    // app.get('/blogs', async (req, res) => {
+    //   const cursor = blogsData.find();
+    //   const result = await cursor.toArray();
+    //   res.send(result);
+    // })
+
+
     app.get('/blogs', async (req, res) => {
-      const cursor = blogsData.find();
-      const result = await cursor.toArray();
-      res.send(result);
+      try {
+        const cursor = blogsData.find().sort({ postDate: -1 });
+        const result = await cursor.toArray();
+        res.json(result);
+      } catch (error) {
+        console.error('Error fetching blogs:', error);
+        res.status(500).json({ message: 'Server error' });
+      }
     })
+
     app.get('/allBlogs', async (req, res) => {
       const filter = req.query.filter
       const search = req.query.search
@@ -144,6 +158,7 @@ async function run() {
                   $project: {
                       _id: 1,
                       title: 1,
+                      writerName: 1,
                       image: 1,
                       short_description: 1,
                       long_description: 1,
@@ -205,6 +220,22 @@ async function run() {
     const query = { blogID: id };
     // const cursor = commentCollection.find();
     const result = await commentCollection.find(query).toArray();
+    res.send(result);
+  })
+
+  
+
+  //science
+  app.get('/scienceBlogs', async(req,res)=>{
+    const cursor = science.find();
+    const result = await cursor.toArray();
+    res.send(result);
+  })
+
+  app.get('/scienceBlogs/:id', async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await science.findOne(query);
     res.send(result);
   })
 
