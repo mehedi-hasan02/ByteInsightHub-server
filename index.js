@@ -31,31 +31,29 @@ const client = new MongoClient(uri, {
 });
 
 
-const logger = async(req,res,next)=>{
-  console.log('called: ',req.host, req.originalUrl);
+const logger = async (req, res, next) => {
+  console.log('called: ', req.host, req.originalUrl);
   next();
 }
 
-const verifyToken = async(req,res,next)=>{
+const verifyToken = async (req, res, next) => {
   const token = req.cookies?.token;
 
-  console.log('Value of the middleware: ',token);
+  console.log('Value of the middleware: ', token);
 
-  if(!token)
-  {
-    return res.status(401).send({message: 'not authorize'})
+  if (!token) {
+    return res.status(401).send({ message: 'not authorize' })
   }
-  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded)=>{
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
     //error
-    if(err)
-    {
+    if (err) {
       console.log(err);
-      return req.status(401).send({message: 'unauthorize'})
+      return req.status(401).send({ message: 'unauthorize' })
     }
     req.user = decoded;
     next();
   })
-  
+
 }
 
 const cookieOptions = {
@@ -66,10 +64,6 @@ const cookieOptions = {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
-    // await client.connect();
-    // Send a ping to confirm a successful connection
-    // await client.db("admin").command({ ping: 1 });
 
     const blogsData = client.db('blogs').collection('blogsData');
     const wishlist = client.db('blogs').collection('wishlist');
@@ -142,57 +136,85 @@ async function run() {
       res.send(result);
     })
 
-    //wishlist collection
-    app.post('/wishlist', async (req, res) => {
-      const query = req.body;
-      const result = await wishlist.insertOne(query);
-      res.send(result);
-    })
+    app.get('/topPost', async (req, res) => {
+      try {
 
-    app.get('/wishlist', async (req, res) => {
-      const cursor = wishlist.find();
-      const result = await cursor.toArray();
-      res.send(result);
-    })
+          const topTenPosts = await blogsData.aggregate([
+              {
+                  $project: {
+                      _id: 1,
+                      title: 1,
+                      image: 1,
+                      short_description: 1,
+                      long_description: 1,
+                      wordCount: { $size: { $split: ['$long_description', ' '] } }
+                  }
+              },
+              { $sort: { wordCount: -1 } },
+              { $limit: 10 }
+          ]).toArray();
+  
+          res.json(topTenPosts);
+  
+          // client.close();
+      } catch (err) {
+          console.error(err);
+          res.status(500).json({ message: 'Internal server error' });
+      }
+  });
+  
 
-    app.get('/wishlist/:email', async (req, res) => {
-      const emailName = req.params.email;
-      const query = { email: emailName };
-      const result = await wishlist.find(query).toArray();
-      res.send(result);
-    })
+  //wishlist collection
+  app.post('/wishlist', async (req, res) => {
+    const query = req.body;
+    const result = await wishlist.insertOne(query);
+    res.send(result);
+  })
 
-    app.delete('/wishlist/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: new ObjectId(id) };
-      const result = await wishlist.deleteOne(query);
-      res.send(result);
-    })
+  app.get('/wishlist', async (req, res) => {
+    const cursor = wishlist.find();
+    const result = await cursor.toArray();
+    res.send(result);
+  })
 
+  app.get('/wishlist/:email', async (req, res) => {
+    const emailName = req.params.email;
+    const query = { email: emailName };
+    const result = await wishlist.find(query).toArray();
+    res.send(result);
+  })
 
-
-    //comment collection
-    app.post('/comment', async (req, res) => {
-      const query = req.body;
-      const result = await commentCollection.insertOne(query);
-      res.send(result);
-    })
-
-    app.get('/comment/:id', async (req, res) => {
-      const id = req.params.id;
-      const query = { blogID: id };
-      // const cursor = commentCollection.find();
-      const result = await commentCollection.find(query).toArray();
-      res.send(result);
-    })
+  app.delete('/wishlist/:id', async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await wishlist.deleteOne(query);
+    res.send(result);
+  })
 
 
 
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
-  } finally {
-    // Ensures that the client will close when you finish/error
-    // await client.close();
-  }
+  //comment collection
+  app.post('/comment', async (req, res) => {
+    const query = req.body;
+    const result = await commentCollection.insertOne(query);
+    res.send(result);
+  })
+
+  app.get('/comment/:id', async (req, res) => {
+    const id = req.params.id;
+    const query = { blogID: id };
+    // const cursor = commentCollection.find();
+    const result = await commentCollection.find(query).toArray();
+    res.send(result);
+  })
+
+
+
+  console.log("Pinged your deployment. You successfully connected to MongoDB!");
+} finally {
+  // Ensures that the client will close when you finish/error
+  // await client.close();
+}
 }
 run().catch(console.dir);
 
