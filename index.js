@@ -69,9 +69,10 @@ async function run() {
     const wishlist = client.db('blogs').collection('wishlist');
     const science = client.db('blogs').collection('science');
     const commentCollection = client.db('blogs').collection('commentCollection');
+    const trendTach = client.db('blogs').collection('trendTach');
 
     //creating Token
-    app.post("/jwt", logger, async (req, res) => {
+    app.post("/jwt", async (req, res) => {
       const user = req.body;
       console.log("user for token", user);
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET);
@@ -129,14 +130,14 @@ async function run() {
       res.send(result)
     })
 
-    app.get('/blogs/:id', async (req, res) => {
+    app.get('/blogs/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await blogsData.findOne(query);
       res.send(result);
     })
 
-    app.put('/blogs/:id', async (req, res) => {
+    app.put('/blogs/:id',verifyToken, async (req, res) => {
       const id = req.params.id;
       const blogData = req.body;
       const query = { _id: new ObjectId(id) };
@@ -153,99 +154,112 @@ async function run() {
     app.get('/topPost', async (req, res) => {
       try {
 
-          const topTenPosts = await blogsData.aggregate([
-              {
-                  $project: {
-                      _id: 1,
-                      title: 1,
-                      writerName: 1,
-                      image: 1,
-                      short_description: 1,
-                      long_description: 1,
-                      wordCount: { $size: { $split: ['$long_description', ' '] } }
-                  }
-              },
-              { $sort: { wordCount: -1 } },
-              { $limit: 10 }
-          ]).toArray();
-  
-          res.json(topTenPosts);
-  
-          // client.close();
+        const topTenPosts = await blogsData.aggregate([
+          {
+            $project: {
+              _id: 1,
+              title: 1,
+              writerName: 1,
+              writerImage: 1,
+              image: 1,
+              short_description: 1,
+              long_description: 1,
+              wordCount: { $size: { $split: ['$long_description', ' '] } }
+            }
+          },
+          { $sort: { wordCount: -1 } },
+          { $limit: 10 }
+        ]).toArray();
+
+        res.json(topTenPosts);
+
+        // client.close();
       } catch (err) {
-          console.error(err);
-          res.status(500).json({ message: 'Internal server error' });
+        console.error(err);
+        res.status(500).json({ message: 'Internal server error' });
       }
-  });
-  
-
-  //wishlist collection
-  app.post('/wishlist', async (req, res) => {
-    const query = req.body;
-    const result = await wishlist.insertOne(query);
-    res.send(result);
-  })
-
-  app.get('/wishlist', async (req, res) => {
-    const cursor = wishlist.find();
-    const result = await cursor.toArray();
-    res.send(result);
-  })
-
-  app.get('/wishlist/:email', async (req, res) => {
-    const emailName = req.params.email;
-    const query = { email: emailName };
-    const result = await wishlist.find(query).toArray();
-    res.send(result);
-  })
-
-  app.delete('/wishlist/:id', async (req, res) => {
-    const id = req.params.id;
-    const query = { _id: new ObjectId(id) };
-    const result = await wishlist.deleteOne(query);
-    res.send(result);
-  })
+    });
 
 
+    //wishlist collection
+    app.post('/wishlist', async (req, res) => {
+      const query = req.body;
+      const result = await wishlist.insertOne(query);
+      res.send(result);
+    })
 
-  //comment collection
-  app.post('/comment', async (req, res) => {
-    const query = req.body;
-    const result = await commentCollection.insertOne(query);
-    res.send(result);
-  })
+    app.get('/wishlist', async (req, res) => {
+      const cursor = wishlist.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
 
-  app.get('/comment/:id', async (req, res) => {
-    const id = req.params.id;
-    const query = { blogID: id };
-    // const cursor = commentCollection.find();
-    const result = await commentCollection.find(query).toArray();
-    res.send(result);
-  })
+    app.get('/wishlist/:email', async (req, res) => {
+      const emailName = req.params.email;
+      const query = { email: emailName };
+      const result = await wishlist.find(query).toArray();
+      res.send(result);
+    })
 
-  
-
-  //science
-  app.get('/scienceBlogs', async(req,res)=>{
-    const cursor = science.find();
-    const result = await cursor.toArray();
-    res.send(result);
-  })
-
-  app.get('/scienceBlogs/:id', async (req, res) => {
-    const id = req.params.id;
-    const query = { _id: new ObjectId(id) };
-    const result = await science.findOne(query);
-    res.send(result);
-  })
+    app.delete('/wishlist/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await wishlist.deleteOne(query);
+      res.send(result);
+    })
 
 
 
-  console.log("Pinged your deployment. You successfully connected to MongoDB!");
-} finally {
-  // Ensures that the client will close when you finish/error
-  // await client.close();
-}
+    //comment collection
+    app.post('/comment', async (req, res) => {
+      const query = req.body;
+      const result = await commentCollection.insertOne(query);
+      res.send(result);
+    })
+
+    app.get('/comment/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { blogID: id };
+      // const cursor = commentCollection.find();
+      const result = await commentCollection.find(query).toArray();
+      res.send(result);
+    })
+
+
+    //science
+    app.get('/scienceBlogs', async (req, res) => {
+      const cursor = science.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
+    app.get('/scienceBlogs/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await science.findOne(query);
+      res.send(result);
+    })
+
+
+    //trendTech
+    app.get('/trendBlogs', async (req, res) => {
+      const cursor = trendTach.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    })
+
+    app.get('/trendBlogs/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await trendTach.findOne(query);
+      res.send(result);
+    })
+
+
+
+    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+  } finally {
+  }
 }
 run().catch(console.dir);
 
